@@ -130,7 +130,7 @@ def main():
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(args.history_dir, exist_ok=True)
 
-    train_loader, test_loader = get_cifar10_loaders(
+    train_loader, val_loader, _= get_cifar10_loaders(
         batch_size=args.batch_size
     )
 
