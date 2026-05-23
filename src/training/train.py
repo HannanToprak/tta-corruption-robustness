@@ -19,10 +19,12 @@ def parse_args():
     )
 
     parser.add_argument("--model", type=str, default="cnn", choices=["cnn", "resnet18"])
-    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
+    parser.add_argument("--val_size", type=int, default=5000)
+    parser.add_argument("--seed", type=int, default=42)
 
     parser.add_argument(
         "--checkpoint_dir",
@@ -43,10 +45,6 @@ def parse_args():
 
 
 def build_model(model_name, num_classes=10):
-    """
-    Builds the selected model architecture.
-    """
-
     if model_name == "cnn":
         return SimpleCNN(num_classes=num_classes)
 
@@ -57,10 +55,6 @@ def build_model(model_name, num_classes=10):
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
-    """
-    Trains the model for one epoch.
-    """
-
     model.train()
 
     running_loss = 0.0
@@ -81,17 +75,10 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         running_loss += loss.item()
         running_acc += accuracy(outputs, labels)
 
-    avg_loss = running_loss / len(loader)
-    avg_acc = running_acc / len(loader)
-
-    return avg_loss, avg_acc
+    return running_loss / len(loader), running_acc / len(loader)
 
 
 def evaluate(model, loader, criterion, device):
-    """
-    Evaluates the model without updating parameters.
-    """
-
     model.eval()
 
     running_loss = 0.0
@@ -108,20 +95,20 @@ def evaluate(model, loader, criterion, device):
             running_loss += loss.item()
             running_acc += accuracy(outputs, labels)
 
-    avg_loss = running_loss / len(loader)
-    avg_acc = running_acc / len(loader)
-
-    return avg_loss, avg_acc
+    return running_loss / len(loader), running_acc / len(loader)
 
 
 def main():
     args = parse_args()
 
     if args.checkpoint_name is None:
-        args.checkpoint_name = f"best_{args.model}.pth"
+        args.checkpoint_name = f"best_{args.model}_standard_val.pth"
 
     if args.history_name is None:
-        args.history_name = f"{args.model}_training_history.json"
+        args.history_name = f"{args.model}_standard_val_history.json"
+
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
@@ -130,8 +117,10 @@ def main():
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(args.history_dir, exist_ok=True)
 
-    train_loader, val_loader, _= get_cifar10_loaders(
-        batch_size=args.batch_size
+    train_loader, val_loader, _ = get_cifar10_loaders(
+        batch_size=args.batch_size,
+        val_size=args.val_size,
+        seed=args.seed
     )
 
     model = build_model(
@@ -153,14 +142,14 @@ def main():
         gamma=0.5
     )
 
-    best_test_acc = 0.0
+    best_val_acc = 0.0
 
     history = {
         "model": args.model,
         "train_loss": [],
         "train_acc": [],
-        "test_loss": [],
-        "test_acc": [],
+        "val_loss": [],
+        "val_acc": [],
         "learning_rate": []
     }
 
@@ -175,9 +164,9 @@ def main():
             device=device
         )
 
-        test_loss, test_acc = evaluate(
+        val_loss, val_acc = evaluate(
             model=model,
-            loader=test_loader,
+            loader=val_loader,
             criterion=criterion,
             device=device
         )
@@ -186,20 +175,20 @@ def main():
 
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
-        history["test_loss"].append(test_loss)
-        history["test_acc"].append(test_acc)
+        history["val_loss"].append(val_loss)
+        history["val_acc"].append(val_acc)
         history["learning_rate"].append(current_lr)
 
         print(
             f"Train Loss: {train_loss:.4f} | "
             f"Train Acc: {train_acc:.4f} | "
-            f"Test Loss: {test_loss:.4f} | "
-            f"Test Acc: {test_acc:.4f} | "
+            f"Val Loss: {val_loss:.4f} | "
+            f"Val Acc: {val_acc:.4f} | "
             f"LR: {current_lr:.6f}"
         )
 
-        if test_acc > best_test_acc:
-            best_test_acc = test_acc
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
 
             checkpoint_path = os.path.join(
                 args.checkpoint_dir,
@@ -212,14 +201,14 @@ def main():
                     "model": args.model,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
-                    "best_test_acc": best_test_acc,
+                    "best_val_acc": best_val_acc,
                     "history": history,
                     "args": vars(args)
                 },
                 checkpoint_path
             )
 
-            print(f"Best model saved with accuracy: {best_test_acc:.4f}")
+            print(f"Best model saved with validation accuracy: {best_val_acc:.4f}")
 
         scheduler.step()
 
@@ -232,7 +221,7 @@ def main():
         json.dump(history, f, indent=4)
 
     print("\nTraining completed.")
-    print(f"Best test accuracy: {best_test_acc:.4f}")
+    print(f"Best validation accuracy: {best_val_acc:.4f}")
     print(f"Training history saved to {history_path}")
 
 
