@@ -8,25 +8,52 @@ import torch.optim as optim
 from tqdm import tqdm
 
 from src.datasets.cifar10 import get_cifar10_loaders
+from src.models.resnet18_cifar import ResNet18CIFAR
 from src.models.simple_cnn import SimpleCNN
 from src.evaluation.metrics import accuracy
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Train SimpleCNN on CIFAR-10"
+        description="Train image classification models on CIFAR-10"
     )
 
+    parser.add_argument("--model", type=str, default="cnn", choices=["cnn", "resnet18"])
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight_decay", type=float, default=1e-4)
-    parser.add_argument("--checkpoint_dir", type=str, default="/content/drive/MyDrive/tta_project/checkpoints")
-    parser.add_argument("--history_dir", type=str, default="/content/drive/MyDrive/tta_project/results")
-    parser.add_argument("--checkpoint_name", type=str, default="best_simple_cnn.pth")
-    parser.add_argument("--history_name", type=str, default="simple_cnn_training_history.json")
+
+    parser.add_argument(
+        "--checkpoint_dir",
+        type=str,
+        default="/content/drive/MyDrive/tta_project/checkpoints"
+    )
+
+    parser.add_argument(
+        "--history_dir",
+        type=str,
+        default="/content/drive/MyDrive/tta_project/results"
+    )
+
+    parser.add_argument("--checkpoint_name", type=str, default=None)
+    parser.add_argument("--history_name", type=str, default=None)
 
     return parser.parse_args()
+
+
+def build_model(model_name, num_classes=10):
+    """
+    Builds the selected model architecture.
+    """
+
+    if model_name == "cnn":
+        return SimpleCNN(num_classes=num_classes)
+
+    if model_name == "resnet18":
+        return ResNet18CIFAR(num_classes=num_classes)
+
+    raise ValueError(f"Unsupported model: {model_name}")
 
 
 def train_one_epoch(model, loader, criterion, optimizer, device):
@@ -90,8 +117,15 @@ def evaluate(model, loader, criterion, device):
 def main():
     args = parse_args()
 
+    if args.checkpoint_name is None:
+        args.checkpoint_name = f"best_{args.model}.pth"
+
+    if args.history_name is None:
+        args.history_name = f"{args.model}_training_history.json"
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
+    print(f"Selected model: {args.model}")
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(args.history_dir, exist_ok=True)
@@ -100,7 +134,10 @@ def main():
         batch_size=args.batch_size
     )
 
-    model = SimpleCNN(num_classes=10).to(device)
+    model = build_model(
+        model_name=args.model,
+        num_classes=10
+    ).to(device)
 
     criterion = nn.CrossEntropyLoss()
 
@@ -119,6 +156,7 @@ def main():
     best_test_acc = 0.0
 
     history = {
+        "model": args.model,
         "train_loss": [],
         "train_acc": [],
         "test_loss": [],
@@ -171,6 +209,7 @@ def main():
             torch.save(
                 {
                     "epoch": epoch + 1,
+                    "model": args.model,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "best_test_acc": best_test_acc,
