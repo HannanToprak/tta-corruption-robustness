@@ -6,19 +6,26 @@ from tqdm import tqdm
 
 from src.datasets.cifar10 import get_cifar10_loaders
 from src.models.simple_cnn import SimpleCNN
+from src.models.resnet18_cifar import ResNet18CIFAR
 from src.evaluation.metrics import accuracy
-from src.utils.checkpoint import load_checkpoint
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Evaluate SimpleCNN on clean CIFAR-10 test set"
+        description="Evaluate trained models on clean CIFAR-10 test set"
+    )
+
+    parser.add_argument(
+        "--model",
+        type=str,
+        required=True,
+        choices=["cnn", "resnet18"]
     )
 
     parser.add_argument(
         "--checkpoint_path",
         type=str,
-        default="/content/drive/MyDrive/tta_project/checkpoints/best_simple_cnn.pth"
+        required=True
     )
 
     parser.add_argument(
@@ -30,22 +37,29 @@ def parse_args():
     return parser.parse_args()
 
 
-def evaluate(model, loader, criterion, device):
-    """
-    Evaluates model on clean CIFAR-10 test data.
-    """
+def build_model(model_name):
+    if model_name == "cnn":
+        return SimpleCNN(num_classes=10)
 
+    if model_name == "resnet18":
+        return ResNet18CIFAR(num_classes=10)
+
+    raise ValueError(f"Unsupported model: {model_name}")
+
+
+def evaluate(model, loader, criterion, device):
     model.eval()
 
     running_loss = 0.0
     running_acc = 0.0
 
     with torch.no_grad():
-        for images, labels in tqdm(loader, desc="Clean Evaluation"):
+        for images, labels in tqdm(loader, desc="Testing"):
             images = images.to(device)
             labels = labels.to(device)
 
             outputs = model(images)
+
             loss = criterion(outputs, labels)
 
             running_loss += loss.item()
@@ -61,22 +75,22 @@ def main():
     args = parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
 
-    _, test_loader = get_cifar10_loaders(
+    print(f"Using device: {device}")
+    print(f"Model: {args.model}")
+
+    _, _, test_loader = get_cifar10_loaders(
         batch_size=args.batch_size
     )
 
-    model = SimpleCNN(num_classes=10).to(device)
+    model = build_model(args.model).to(device)
 
-    model, checkpoint = load_checkpoint(
-        checkpoint_path=args.checkpoint_path,
-        model=model,
-        device=device
+    checkpoint = torch.load(
+        args.checkpoint_path,
+        map_location=device
     )
 
-    print(f"Loaded checkpoint from epoch: {checkpoint['epoch']}")
-    print(f"Best recorded test accuracy: {checkpoint['best_test_acc']:.4f}")
+    model.load_state_dict(checkpoint["model_state_dict"])
 
     criterion = nn.CrossEntropyLoss()
 
@@ -87,7 +101,7 @@ def main():
         device=device
     )
 
-    print("\nClean CIFAR-10 Evaluation")
+    print("\nClean Test Results")
     print(f"Test Loss: {test_loss:.4f}")
     print(f"Test Accuracy: {test_acc:.4f}")
 
