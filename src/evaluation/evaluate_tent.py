@@ -3,7 +3,6 @@ import json
 import os
 
 import torch
-import torch.nn as nn
 from tqdm import tqdm
 
 from src.datasets.cifar10c import get_cifar10c_loader
@@ -37,35 +36,18 @@ def parse_args():
         description="Evaluate TENT on CIFAR-10-C"
     )
 
+    parser.add_argument("--model", type=str, required=True, choices=["cnn", "resnet18"])
+    parser.add_argument("--checkpoint_path", type=str, required=True)
+    parser.add_argument("--severity", type=int, default=1)
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--lr", type=float, default=1e-3)
+
     parser.add_argument(
-        "--model",
+        "--mode",
         type=str,
-        required=True,
-        choices=["cnn", "resnet18"]
-    )
-
-    parser.add_argument(
-        "--checkpoint_path",
-        type=str,
-        required=True
-    )
-
-    parser.add_argument(
-        "--severity",
-        type=int,
-        default=1
-    )
-
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=128
-    )
-
-    parser.add_argument(
-        "--lr",
-        type=float,
-        default=1e-3
+        default="episodic",
+        choices=["episodic", "continual"],
+        help="episodic resets model for each corruption; continual adapts across corruptions"
     )
 
     parser.add_argument(
@@ -88,10 +70,6 @@ def build_model(model_name):
 
 
 def evaluate_tent(tent_model, loader, device):
-    """
-    Evaluates TENT adaptation on corruption data.
-    """
-
     running_acc = 0.0
     running_entropy = 0.0
 
@@ -118,35 +96,37 @@ def main():
     print(f"Using device: {device}")
     print(f"Model: {args.model}")
     print(f"Severity: {args.severity}")
+    print(f"TENT mode: {args.mode}")
 
     os.makedirs(args.output_dir, exist_ok=True)
-
-    base_model = build_model(args.model).to(device)
 
     checkpoint = torch.load(
         args.checkpoint_path,
         map_location=device
     )
 
-    base_model.load_state_dict(checkpoint["model_state_dict"])
-
-    criterion = nn.CrossEntropyLoss()
-
     results = {}
 
-    for corruption in CORRUPTIONS:
-        print(f"\nEvaluating corruption with TENT: {corruption}")
-
-        # Important:
-        # Reset model for each corruption.
+    if args.mode == "continual":
         model = build_model(args.model).to(device)
-
         model.load_state_dict(checkpoint["model_state_dict"])
 
         tent_model = Tent(
             model=model,
             lr=args.lr
         )
+
+    for corruption in CORRUPTIONS:
+        print(f"\nEvaluating corruption with TENT: {corruption}")
+
+        if args.mode == "episodic":
+            model = build_model(args.model).to(device)
+            model.load_state_dict(checkpoint["model_state_dict"])
+
+            tent_model = Tent(
+                model=model,
+                lr=args.lr
+            )
 
         loader = get_cifar10c_loader(
             corruption=corruption,
@@ -177,12 +157,15 @@ def main():
     )
 
     results["mean_accuracy"] = mean_accuracy
+    results["mode"] = args.mode
+    results["severity"] = args.severity
+    results["model"] = args.model
 
     print(f"\nMean TENT Accuracy: {mean_accuracy:.4f}")
 
     output_path = os.path.join(
         args.output_dir,
-        f"{args.model}_tent_severity_{args.severity}.json"
+        f"{args.model}_tent_{args.mode}_severity_{args.severity}.json"
     )
 
     with open(output_path, "w") as f:
