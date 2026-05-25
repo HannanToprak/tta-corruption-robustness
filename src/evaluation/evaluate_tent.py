@@ -53,7 +53,7 @@ def parse_args():
     "--training_type",
     type=str,
     default="standard",
-    choices=["standard", "augmix"])
+    choices=["standard", "augmix","augmix_full"])
 
     parser.add_argument(
         "--output_dir",

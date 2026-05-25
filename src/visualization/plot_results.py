@@ -20,7 +20,7 @@ CLEAN_DIR = RESULT_ROOT / "clean"
 PLOT_DIR = RESULT_ROOT / "plots"
 
 MODELS = ["cnn", "resnet18"]
-TRAINING_TYPES = ["standard", "augmix"]
+TRAINING_TYPES = ["standard", "augmix","augmix_full"]
 METHODS = ["frozen", "episodic_tent", "continual_tent"]
 
 

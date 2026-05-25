@@ -18,7 +18,7 @@ def parse_args():
     )
 
     parser.add_argument("--model", type=str, required=True, choices=["cnn", "resnet18"])
-    parser.add_argument("--training_type", type=str, default="standard", choices=["standard", "augmix"])
+    parser.add_argument("--training_type", type=str, default="standard", choices=["standard", "augmix","augmix_full"])
     parser.add_argument("--checkpoint_path", type=str, required=True)
     parser.add_argument("--batch_size", type=int, default=128)
 
