@@ -1,4 +1,6 @@
 import argparse
+import json
+import os
 
 import torch
 import torch.nn as nn
@@ -15,23 +17,15 @@ def parse_args():
         description="Evaluate trained models on clean CIFAR-10 test set"
     )
 
-    parser.add_argument(
-        "--model",
-        type=str,
-        required=True,
-        choices=["cnn", "resnet18"]
-    )
+    parser.add_argument("--model", type=str, required=True, choices=["cnn", "resnet18"])
+    parser.add_argument("--training_type", type=str, default="standard", choices=["standard", "augmix"])
+    parser.add_argument("--checkpoint_path", type=str, required=True)
+    parser.add_argument("--batch_size", type=int, default=128)
 
     parser.add_argument(
-        "--checkpoint_path",
+        "--output_dir",
         type=str,
-        required=True
-    )
-
-    parser.add_argument(
-        "--batch_size",
-        type=int,
-        default=128
+        default="/content/drive/MyDrive/tta_project/results/clean"
     )
 
     return parser.parse_args()
@@ -59,7 +53,6 @@ def evaluate(model, loader, criterion, device):
             labels = labels.to(device)
 
             outputs = model(images)
-
             loss = criterion(outputs, labels)
 
             running_loss += loss.item()
@@ -78,6 +71,9 @@ def main():
 
     print(f"Using device: {device}")
     print(f"Model: {args.model}")
+    print(f"Training type: {args.training_type}")
+
+    os.makedirs(args.output_dir, exist_ok=True)
 
     _, _, test_loader = get_cifar10_loaders(
         batch_size=args.batch_size
@@ -104,6 +100,24 @@ def main():
     print("\nClean Test Results")
     print(f"Test Loss: {test_loss:.4f}")
     print(f"Test Accuracy: {test_acc:.4f}")
+
+    results = {
+        "model": args.model,
+        "training_type": args.training_type,
+        "test_loss": test_loss,
+        "test_accuracy": test_acc,
+        "checkpoint_path": args.checkpoint_path,
+    }
+
+    output_path = os.path.join(
+        args.output_dir,
+        f"{args.model}_{args.training_type}_clean_results.json"
+    )
+
+    with open(output_path, "w") as f:
+        json.dump(results, f, indent=4)
+
+    print(f"Results saved to {output_path}")
 
 
 if __name__ == "__main__":

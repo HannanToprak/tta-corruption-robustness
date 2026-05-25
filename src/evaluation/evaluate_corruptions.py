@@ -43,6 +43,12 @@ def parse_args():
         default="resnet18",
         choices=["cnn", "resnet18"]
     )
+    parser.add_argument(
+    "--training_type",
+    type=str,
+    default="standard",
+    choices=["standard", "augmix"]
+    )
 
     parser.add_argument(
         "--checkpoint_path",
@@ -112,6 +118,7 @@ def main():
 
     print(f"Using device: {device}")
     print(f"Model: {args.model}")
+    print(f"Training type: {args.training_type}")
     print(f"Severity: {args.severity}")
 
     model = build_model(args.model).to(device)
@@ -164,10 +171,7 @@ def main():
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    output_path = os.path.join(
-        args.output_dir,
-        f"{args.model}_severity_{args.severity}_results.json"
-    )
+    output_path = os.path.join( args.output_dir,f"{args.model}_{args.training_type}_severity_{args.severity}_results.json")
 
     with open(output_path, "w") as f:
         json.dump(results, f, indent=4)

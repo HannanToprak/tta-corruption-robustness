@@ -49,6 +49,11 @@ def parse_args():
         choices=["episodic", "continual"],
         help="episodic resets model for each corruption; continual adapts across corruptions"
     )
+    parser.add_argument(
+    "--training_type",
+    type=str,
+    default="standard",
+    choices=["standard", "augmix"])
 
     parser.add_argument(
         "--output_dir",
@@ -95,6 +100,7 @@ def main():
 
     print(f"Using device: {device}")
     print(f"Model: {args.model}")
+    print(f"Training type: {args.training_type}")
     print(f"Severity: {args.severity}")
     print(f"TENT mode: {args.mode}")
 
@@ -165,7 +171,7 @@ def main():
 
     output_path = os.path.join(
         args.output_dir,
-        f"{args.model}_tent_{args.mode}_severity_{args.severity}.json"
+        f"{args.model}_{args.training_type}_tent_{args.mode}_severity_{args.severity}.json"
     )
 
     with open(output_path, "w") as f:
