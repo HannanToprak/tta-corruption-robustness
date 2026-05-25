@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision import datasets, transforms
-
+from src.augmentation.augmix import get_augmix_transform
 
 def get_cifar10_loaders(
     batch_size=128,
     val_size=5000,
     seed=42,
-    num_workers=2
+    num_workers=2,
+    augmentation="standard"
 ):
     """
     Creates CIFAR-10 train, validation, and test loaders.
@@ -21,11 +22,18 @@ def get_cifar10_loaders(
     The original CIFAR-10 test set remains untouched.
     """
 
-    train_transform = transforms.Compose([
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-    ])
+    if augmentation == "standard":
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+        ])
+
+    elif augmentation == "augmix":
+        train_transform = get_augmix_transform()
+
+    else:
+        raise ValueError(f"Unsupported augmentation: {augmentation}")
 
     eval_transform = transforms.Compose([
         transforms.ToTensor(),

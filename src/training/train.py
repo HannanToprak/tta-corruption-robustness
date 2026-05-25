@@ -25,19 +25,9 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--val_size", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
-
-    parser.add_argument(
-        "--checkpoint_dir",
-        type=str,
-        default="/content/drive/MyDrive/tta_project/checkpoints"
-    )
-
-    parser.add_argument(
-        "--history_dir",
-        type=str,
-        default="/content/drive/MyDrive/tta_project/results"
-    )
-
+    parser.add_argument("--augmentation",type=str,default="standard",choices=["standard", "augmix"])
+    parser.add_argument("--checkpoint_dir",type=str,default="/content/drive/MyDrive/tta_project/checkpoints")
+    parser.add_argument("--history_dir",type=str,default="/content/drive/MyDrive/tta_project/results")
     parser.add_argument("--checkpoint_name", type=str, default=None)
     parser.add_argument("--history_name", type=str, default=None)
 
@@ -102,10 +92,10 @@ def main():
     args = parse_args()
 
     if args.checkpoint_name is None:
-        args.checkpoint_name = f"best_{args.model}_standard_val.pth"
+        args.checkpoint_name = f"best_{args.model}_{args.augmentation}_val.pth"
 
     if args.history_name is None:
-        args.history_name = f"{args.model}_standard_val_history.json"
+        args.history_name = f"{args.model}_{args.augmentation}_val_history.json"
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -113,6 +103,7 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
     print(f"Selected model: {args.model}")
+    print(f"Augmentation: {args.augmentation}")
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     os.makedirs(args.history_dir, exist_ok=True)
@@ -120,7 +111,8 @@ def main():
     train_loader, val_loader, _ = get_cifar10_loaders(
         batch_size=args.batch_size,
         val_size=args.val_size,
-        seed=args.seed
+        seed=args.seed,
+        augmentation=args.augmentation
     )
 
     model = build_model(
