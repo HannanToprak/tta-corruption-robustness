@@ -11,6 +11,7 @@ from src.datasets.cifar10 import get_cifar10_loaders
 from src.models.resnet18_cifar import ResNet18CIFAR
 from src.models.simple_cnn import SimpleCNN
 from src.evaluation.metrics import accuracy
+from src.augmentation.augmix_full import augmix_jsd_loss
 
 
 def parse_args():
@@ -25,9 +26,15 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=1e-4)
     parser.add_argument("--val_size", type=int, default=5000)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--augmentation",type=str,default="standard",choices=["standard", "augmix"])
-    parser.add_argument("--checkpoint_dir",type=str,default="/content/drive/MyDrive/tta_project/checkpoints")
-    parser.add_argument("--history_dir",type=str,default="/content/drive/MyDrive/tta_project/results")
+    parser.add_argument(
+        "--augmentation",
+        type=str,
+        default="standard",
+        choices=["standard", "augmix", "augmix_full"]
+    )
+    parser.add_argument("--jsd_weight", type=float, default=12.0)
+    parser.add_argument("--checkpoint_dir", type=str, default="/content/drive/MyDrive/tta_project/checkpoints")
+    parser.add_argument("--history_dir", type=str, default="/content/drive/MyDrive/tta_project/results")
     parser.add_argument("--checkpoint_name", type=str, default=None)
     parser.add_argument("--history_name", type=str, default=None)
 
@@ -66,6 +73,61 @@ def train_one_epoch(model, loader, criterion, optimizer, device):
         running_acc += accuracy(outputs, labels)
 
     return running_loss / len(loader), running_acc / len(loader)
+
+
+def train_one_epoch_augmix_full(
+    model,
+    loader,
+    criterion,
+    optimizer,
+    device,
+    jsd_weight=12.0,
+):
+    model.train()
+
+    running_loss = 0.0
+    running_ce_loss = 0.0
+    running_jsd_loss = 0.0
+    running_acc = 0.0
+
+    for clean_images, aug1_images, aug2_images, labels in tqdm(
+        loader,
+        desc="Training AugMix Full"
+    ):
+        clean_images = clean_images.to(device)
+        aug1_images = aug1_images.to(device)
+        aug2_images = aug2_images.to(device)
+        labels = labels.to(device)
+
+        optimizer.zero_grad()
+
+        logits_clean = model(clean_images)
+        logits_aug1 = model(aug1_images)
+        logits_aug2 = model(aug2_images)
+
+        loss, ce_loss, jsd_loss = augmix_jsd_loss(
+            logits_clean=logits_clean,
+            logits_aug1=logits_aug1,
+            logits_aug2=logits_aug2,
+            labels=labels,
+            criterion=criterion,
+            jsd_weight=jsd_weight,
+        )
+
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()
+        running_ce_loss += ce_loss.item()
+        running_jsd_loss += jsd_loss.item()
+        running_acc += accuracy(logits_clean, labels)
+
+    avg_loss = running_loss / len(loader)
+    avg_ce_loss = running_ce_loss / len(loader)
+    avg_jsd_loss = running_jsd_loss / len(loader)
+    avg_acc = running_acc / len(loader)
+
+    return avg_loss, avg_ce_loss, avg_jsd_loss, avg_acc
 
 
 def evaluate(model, loader, criterion, device):
@@ -138,7 +200,10 @@ def main():
 
     history = {
         "model": args.model,
+        "augmentation": args.augmentation,
         "train_loss": [],
+        "train_ce_loss": [],
+        "train_jsd_loss": [],
         "train_acc": [],
         "val_loss": [],
         "val_acc": [],
@@ -148,13 +213,25 @@ def main():
     for epoch in range(args.epochs):
         print(f"\nEpoch {epoch + 1}/{args.epochs}")
 
-        train_loss, train_acc = train_one_epoch(
-            model=model,
-            loader=train_loader,
-            criterion=criterion,
-            optimizer=optimizer,
-            device=device
-        )
+        if args.augmentation == "augmix_full":
+            train_loss, train_ce_loss, train_jsd_loss, train_acc = train_one_epoch_augmix_full(
+                model=model,
+                loader=train_loader,
+                criterion=criterion,
+                optimizer=optimizer,
+                device=device,
+                jsd_weight=args.jsd_weight,
+            )
+        else:
+            train_loss, train_acc = train_one_epoch(
+                model=model,
+                loader=train_loader,
+                criterion=criterion,
+                optimizer=optimizer,
+                device=device
+            )
+            train_ce_loss = None
+            train_jsd_loss = None
 
         val_loss, val_acc = evaluate(
             model=model,
@@ -166,18 +243,31 @@ def main():
         current_lr = optimizer.param_groups[0]["lr"]
 
         history["train_loss"].append(train_loss)
+        history["train_ce_loss"].append(train_ce_loss)
+        history["train_jsd_loss"].append(train_jsd_loss)
         history["train_acc"].append(train_acc)
         history["val_loss"].append(val_loss)
         history["val_acc"].append(val_acc)
         history["learning_rate"].append(current_lr)
 
-        print(
-            f"Train Loss: {train_loss:.4f} | "
-            f"Train Acc: {train_acc:.4f} | "
-            f"Val Loss: {val_loss:.4f} | "
-            f"Val Acc: {val_acc:.4f} | "
-            f"LR: {current_lr:.6f}"
-        )
+        if args.augmentation == "augmix_full":
+            print(
+                f"Train Loss: {train_loss:.4f} | "
+                f"CE Loss: {train_ce_loss:.4f} | "
+                f"JSD Loss: {train_jsd_loss:.4f} | "
+                f"Train Acc: {train_acc:.4f} | "
+                f"Val Loss: {val_loss:.4f} | "
+                f"Val Acc: {val_acc:.4f} | "
+                f"LR: {current_lr:.6f}"
+            )
+        else:
+            print(
+                f"Train Loss: {train_loss:.4f} | "
+                f"Train Acc: {train_acc:.4f} | "
+                f"Val Loss: {val_loss:.4f} | "
+                f"Val Acc: {val_acc:.4f} | "
+                f"LR: {current_lr:.6f}"
+            )
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -191,6 +281,7 @@ def main():
                 {
                     "epoch": epoch + 1,
                     "model": args.model,
+                    "augmentation": args.augmentation,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "best_val_acc": best_val_acc,
