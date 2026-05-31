@@ -173,7 +173,128 @@ def plot_severity_vs_accuracy(mean_df):
     plt.savefig(path, dpi=300)
     plt.close()
     print(f"Saved: {path}")
+    
+def plot_severity_vs_accuracy_plots(mean_df):
+    fig, axes = plt.subplots(
+        nrows=2,
+        ncols=3,
+        figsize=(12, 7),
+        sharex=True,
+        sharey=True,
+    )
 
+    models = ["cnn", "resnet18"]
+    training_types = ["standard", "augmix", "augmix_full"]
+
+    method_styles = {
+        "frozen": {
+            "linestyle": "-",
+            "marker": "o",
+            "label": "Frozen",
+        },
+        "episodic_tent": {
+            "linestyle": "--",
+            "marker": "s",
+            "label": "Episodic",
+        },
+        "continual_tent": {
+            "linestyle": ":",
+            "marker": "^",
+            "label": "Continual",
+        },
+    }
+
+    column_titles = {
+        "standard": "Standard",
+        "augmix": "AugMix",
+        "augmix_full": "Full AugMix",
+    }
+
+    row_titles = {
+        "cnn": "CNN",
+        "resnet18": "ResNet18",
+    }
+
+    for row, model in enumerate(models):
+        for col, training_type in enumerate(training_types):
+
+            ax = axes[row, col]
+
+            for method in METHODS:
+
+                subset = mean_df[
+                    (mean_df["model"] == model)
+                    & (mean_df["training_type"] == training_type)
+                    & (mean_df["method"] == method)
+                ].sort_values("severity")
+
+                if len(subset) == 0:
+                    continue
+
+                style = method_styles[method]
+
+                ax.plot(
+                    subset["severity"],
+                    subset["mean_accuracy"],
+                    linestyle=style["linestyle"],
+                    marker=style["marker"],
+                    linewidth=2,
+                    markersize=5,
+                    label=style["label"],
+                )
+
+            ax.set_title(
+                column_titles[training_type],
+                fontsize=11,
+                fontweight="bold",
+            )
+
+            ax.set_xticks([1, 2, 3, 4, 5])
+            ax.set_ylim(0.0, 1.0)
+
+            ax.grid(True, alpha=0.3)
+
+            if col == 0:
+                ax.set_ylabel(
+                    row_titles[model],
+                    fontsize=11,
+                    fontweight="bold",
+                )
+
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        ncol=3,
+        frameon=True,
+        bbox_to_anchor=(0.5, 1.02),
+    )
+
+    fig.supxlabel(
+        "Corruption Severity",
+        fontsize=12,
+    )
+
+    fig.supylabel(
+        "Mean CIFAR-10-C Accuracy",
+        fontsize=12,
+    )
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+    path = PLOT_DIR / "severity_vs_accuracy_all.png"
+
+    plt.savefig(
+        path,
+        dpi=300,
+        bbox_inches="tight",
+    )
+
+    plt.close()
+
+    print(f"Saved: {path}")
 
 def plot_model_training_comparison(mean_df, model):
     plt.figure(figsize=(10, 6))
@@ -408,6 +529,7 @@ def main():
     print_summary(mean_df)
 
     plot_severity_vs_accuracy(mean_df)
+    plot_severity_vs_accuracy_plots(mean_df)
 
     for model in MODELS:
         plot_model_training_comparison(mean_df, model=model)
