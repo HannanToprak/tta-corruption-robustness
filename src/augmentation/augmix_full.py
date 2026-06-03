@@ -153,10 +153,10 @@ def augmix(
     """
 
     ws = np.float32(
-        np.random.dirichlet([alpha] * width)
+        np.random.dirichlet([alpha] * width) #The code samples mixing weights using a Dirichlet distribution 
     )
     m = np.float32(
-        np.random.beta(alpha, alpha)
+        np.random.beta(alpha, alpha) # samples a mixing coefficient using a Beta distribution
     )
 
     mix = torch.zeros_like(preprocess(image))
