@@ -6,6 +6,23 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 
+# ============================================================
+# GLOBAL PLOT STYLE
+# ============================================================
+
+plt.rcParams.update({
+    "font.size": 26,
+    "axes.titlesize": 30,
+    "axes.labelsize": 28,
+    "xtick.labelsize": 22,
+    "ytick.labelsize": 22,
+    "legend.fontsize": 22,
+    "figure.titlesize": 32,
+    "lines.linewidth": 5,
+    "lines.markersize": 12,
+})
+
+
 CORRUPTIONS = [
     "gaussian_noise", "shot_noise", "impulse_noise",
     "defocus_blur", "glass_blur", "motion_blur", "zoom_blur",
@@ -20,7 +37,7 @@ CLEAN_DIR = RESULT_ROOT / "clean"
 PLOT_DIR = RESULT_ROOT / "plots"
 
 MODELS = ["cnn", "resnet18"]
-TRAINING_TYPES = ["standard", "augmix","augmix_full"]
+TRAINING_TYPES = ["standard", "augmix", "augmix_full"]
 METHODS = ["frozen", "episodic_tent", "continual_tent"]
 
 
@@ -138,8 +155,18 @@ def collect_corruption_results():
     return pd.DataFrame(rows)
 
 
+def save_figure(path):
+    plt.savefig(
+        path,
+        dpi=600,
+        bbox_inches="tight",
+    )
+    plt.close()
+    print(f"Saved: {path}")
+
+
 def plot_severity_vs_accuracy(mean_df):
-    plt.figure(figsize=(12, 7))
+    plt.figure(figsize=(24, 14))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -157,28 +184,29 @@ def plot_severity_vs_accuracy(mean_df):
                     subset["severity"],
                     subset["mean_accuracy"],
                     marker="o",
+                    linewidth=5,
+                    markersize=12,
                     label=f"{model} | {training_type} | {method}",
                 )
 
-    plt.xlabel("Corruption severity")
-    plt.ylabel("Mean corruption accuracy")
+    plt.xlabel("Corruption Severity")
+    plt.ylabel("Mean Corruption Accuracy")
     plt.title("Mean Accuracy across Corruption Severity")
     plt.xticks([1, 2, 3, 4, 5])
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.3)
-    plt.legend(fontsize=8)
+    plt.grid(True, alpha=0.45, linewidth=1.6)
+    plt.legend(fontsize=20, ncol=2)
     plt.tight_layout()
 
     path = PLOT_DIR / "severity_vs_accuracy_all.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
-    
+    save_figure(path)
+
+
 def plot_severity_vs_accuracy_plots(mean_df):
     fig, axes = plt.subplots(
         nrows=2,
         ncols=3,
-        figsize=(12, 7),
+        figsize=(30, 18),
         sharex=True,
         sharey=True,
     )
@@ -195,18 +223,18 @@ def plot_severity_vs_accuracy_plots(mean_df):
         "episodic_tent": {
             "linestyle": "--",
             "marker": "s",
-            "label": "Episodic",
+            "label": "Episodic TENT",
         },
         "continual_tent": {
             "linestyle": ":",
             "marker": "^",
-            "label": "Continual",
+            "label": "Continual TENT",
         },
     }
 
     column_titles = {
         "standard": "Standard",
-        "augmix": "AugMix",
+        "augmix": "Simple AugMix",
         "augmix_full": "Full AugMix",
     }
 
@@ -217,11 +245,9 @@ def plot_severity_vs_accuracy_plots(mean_df):
 
     for row, model in enumerate(models):
         for col, training_type in enumerate(training_types):
-
             ax = axes[row, col]
 
             for method in METHODS:
-
                 subset = mean_df[
                     (mean_df["model"] == model)
                     & (mean_df["training_type"] == training_type)
@@ -238,26 +264,26 @@ def plot_severity_vs_accuracy_plots(mean_df):
                     subset["mean_accuracy"],
                     linestyle=style["linestyle"],
                     marker=style["marker"],
-                    linewidth=2,
-                    markersize=5,
+                    linewidth=6,
+                    markersize=13,
                     label=style["label"],
                 )
 
             ax.set_title(
                 column_titles[training_type],
-                fontsize=11,
+                fontsize=30,
                 fontweight="bold",
             )
 
             ax.set_xticks([1, 2, 3, 4, 5])
             ax.set_ylim(0.0, 1.0)
-
-            ax.grid(True, alpha=0.3)
+            ax.grid(True, alpha=0.45, linewidth=1.6)
+            ax.tick_params(axis="both", labelsize=24)
 
             if col == 0:
                 ax.set_ylabel(
                     row_titles[model],
-                    fontsize=11,
+                    fontsize=32,
                     fontweight="bold",
                 )
 
@@ -269,35 +295,30 @@ def plot_severity_vs_accuracy_plots(mean_df):
         loc="upper center",
         ncol=3,
         frameon=True,
-        bbox_to_anchor=(0.5, 1.02),
+        fontsize=28,
+        bbox_to_anchor=(0.5, 1.03),
     )
 
     fig.supxlabel(
         "Corruption Severity",
-        fontsize=12,
+        fontsize=34,
+        fontweight="bold",
     )
 
     fig.supylabel(
         "Mean CIFAR-10-C Accuracy",
-        fontsize=12,
+        fontsize=34,
+        fontweight="bold",
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
 
-    path = PLOT_DIR / "severity_vs_accuracy_all.png"
+    path = PLOT_DIR / "severity_vs_accuracy_grid_large.png"
+    save_figure(path)
 
-    plt.savefig(
-        path,
-        dpi=300,
-        bbox_inches="tight",
-    )
-
-    plt.close()
-
-    print(f"Saved: {path}")
 
 def plot_model_training_comparison(mean_df, model):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(22, 13))
 
     for training_type in TRAINING_TYPES:
         for method in METHODS:
@@ -314,26 +335,26 @@ def plot_model_training_comparison(mean_df, model):
                 subset["severity"],
                 subset["mean_accuracy"],
                 marker="o",
+                linewidth=5,
+                markersize=12,
                 label=f"{training_type} | {method}",
             )
 
-    plt.xlabel("Corruption severity")
-    plt.ylabel("Mean corruption accuracy")
+    plt.xlabel("Corruption Severity")
+    plt.ylabel("Mean Corruption Accuracy")
     plt.title(f"{model}: Standard vs AugMix across Severity")
     plt.xticks([1, 2, 3, 4, 5])
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.3)
-    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.45, linewidth=1.6)
+    plt.legend(fontsize=20, ncol=2)
     plt.tight_layout()
 
     path = PLOT_DIR / f"{model}_standard_vs_augmix.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
+    save_figure(path)
 
 
 def plot_tent_gain(mean_df):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(22, 13))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -365,26 +386,26 @@ def plot_tent_gain(mean_df):
                     merged["severity"],
                     merged["gain"],
                     marker="o",
+                    linewidth=5,
+                    markersize=12,
                     label=f"{model} | {training_type} | {method}",
                 )
 
-    plt.axhline(0.0, linestyle="--")
-    plt.xlabel("Corruption severity")
-    plt.ylabel("Accuracy gain over frozen")
+    plt.axhline(0.0, linestyle="--", linewidth=4)
+    plt.xlabel("Corruption Severity")
+    plt.ylabel("Accuracy Gain over Frozen")
     plt.title("TENT Gain over Frozen Baseline")
     plt.xticks([1, 2, 3, 4, 5])
-    plt.grid(True, alpha=0.3)
-    plt.legend(fontsize=8)
+    plt.grid(True, alpha=0.45, linewidth=1.6)
+    plt.legend(fontsize=20, ncol=2)
     plt.tight_layout()
 
     path = PLOT_DIR / "tent_gain_over_frozen_all.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
+    save_figure(path)
 
 
 def plot_continual_trajectory(corr_df, severity):
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(28, 14))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -404,22 +425,29 @@ def plot_continual_trajectory(corr_df, severity):
                 range(len(CORRUPTIONS)),
                 subset["accuracy"],
                 marker="o",
+                linewidth=5,
+                markersize=12,
                 label=f"{model} | {training_type}",
             )
 
-    plt.xlabel("Corruption order")
+    plt.xlabel("Corruption Order")
     plt.ylabel("Accuracy")
     plt.title(f"Continual TENT Trajectory at Severity {severity}")
-    plt.xticks(range(len(CORRUPTIONS)), CORRUPTIONS, rotation=45, ha="right")
+    plt.xticks(
+        range(len(CORRUPTIONS)),
+        CORRUPTIONS,
+        rotation=45,
+        ha="right",
+        fontsize=22,
+    )
+    plt.yticks(fontsize=22)
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.3)
-    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.45, linewidth=1.6)
+    plt.legend(fontsize=20, ncol=2)
     plt.tight_layout()
 
     path = PLOT_DIR / f"continual_trajectory_severity_{severity}.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
+    save_figure(path)
 
 
 def plot_heatmap(corr_df, model, training_type, severity):
@@ -442,27 +470,57 @@ def plot_heatmap(corr_df, model, training_type, severity):
 
         rows.append(row)
 
-    heatmap_df = pd.DataFrame(rows, index=CORRUPTIONS, columns=methods)
+    heatmap_df = pd.DataFrame(
+        rows,
+        index=CORRUPTIONS,
+        columns=["Frozen", "Episodic TENT", "Continual TENT"],
+    )
 
-    plt.figure(figsize=(7, 9))
+    plt.figure(figsize=(14, 18))
     plt.imshow(heatmap_df.values, aspect="auto", vmin=0.0, vmax=1.0)
-    plt.colorbar(label="Accuracy")
-    plt.xticks(range(len(methods)), methods, rotation=30, ha="right")
-    plt.yticks(range(len(CORRUPTIONS)), CORRUPTIONS)
-    plt.title(f"{model} | {training_type} | Severity {severity}")
+
+    cbar = plt.colorbar(label="Accuracy")
+    cbar.ax.tick_params(labelsize=22)
+
+    plt.xticks(
+        range(len(heatmap_df.columns)),
+        heatmap_df.columns,
+        rotation=25,
+        ha="right",
+        fontsize=24,
+    )
+
+    plt.yticks(
+        range(len(CORRUPTIONS)),
+        CORRUPTIONS,
+        fontsize=22,
+    )
+
+    plt.title(
+        f"{model} | {training_type} | Severity {severity}",
+        fontsize=30,
+        fontweight="bold",
+    )
 
     for i in range(len(CORRUPTIONS)):
         for j in range(len(methods)):
             value = heatmap_df.iloc[i, j]
+
             if pd.notna(value):
-                plt.text(j, i, f"{value:.2f}", ha="center", va="center", fontsize=8)
+                plt.text(
+                    j,
+                    i,
+                    f"{value:.2f}",
+                    ha="center",
+                    va="center",
+                    fontsize=20,
+                    fontweight="bold",
+                )
 
     plt.tight_layout()
 
     path = PLOT_DIR / f"{model}_{training_type}_heatmap_severity_{severity}.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
+    save_figure(path)
 
 
 def plot_entropy_vs_accuracy(corr_df):
@@ -471,7 +529,7 @@ def plot_entropy_vs_accuracy(corr_df):
         & corr_df["entropy"].notna()
     ]
 
-    plt.figure(figsize=(9, 6))
+    plt.figure(figsize=(20, 13))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -486,22 +544,21 @@ def plot_entropy_vs_accuracy(corr_df):
             plt.scatter(
                 model_subset["entropy"],
                 model_subset["accuracy"],
+                s=180,
+                alpha=0.75,
                 label=f"{model} | {training_type}",
-                alpha=0.7,
             )
 
     plt.xlabel("Entropy")
     plt.ylabel("Accuracy")
     plt.title("Entropy vs Accuracy under TENT")
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.3)
-    plt.legend(fontsize=9)
+    plt.grid(True, alpha=0.45, linewidth=1.6)
+    plt.legend(fontsize=20, ncol=2)
     plt.tight_layout()
 
     path = PLOT_DIR / "entropy_vs_accuracy_all.png"
-    plt.savefig(path, dpi=300)
-    plt.close()
-    print(f"Saved: {path}")
+    save_figure(path)
 
 
 def print_summary(mean_df):
