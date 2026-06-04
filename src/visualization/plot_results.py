@@ -7,17 +7,17 @@ import pandas as pd
 
 
 # ============================================================
-# GLOBAL PLOT STYLE
+# PAPER-READABLE GLOBAL PLOT STYLE
 # ============================================================
 
 plt.rcParams.update({
-    "font.size": 26,
-    "axes.titlesize": 30,
-    "axes.labelsize": 28,
-    "xtick.labelsize": 22,
-    "ytick.labelsize": 22,
-    "legend.fontsize": 22,
-    "figure.titlesize": 32,
+    "font.size": 30,
+    "axes.titlesize": 34,
+    "axes.labelsize": 32,
+    "xtick.labelsize": 26,
+    "ytick.labelsize": 26,
+    "legend.fontsize": 24,
+    "figure.titlesize": 36,
     "lines.linewidth": 5,
     "lines.markersize": 12,
 })
@@ -156,17 +156,13 @@ def collect_corruption_results():
 
 
 def save_figure(path):
-    plt.savefig(
-        path,
-        dpi=600,
-        bbox_inches="tight",
-    )
+    plt.savefig(path, dpi=600, bbox_inches="tight")
     plt.close()
     print(f"Saved: {path}")
 
 
 def plot_severity_vs_accuracy(mean_df):
-    plt.figure(figsize=(24, 14))
+    plt.figure(figsize=(26, 15))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -194,19 +190,18 @@ def plot_severity_vs_accuracy(mean_df):
     plt.title("Mean Accuracy across Corruption Severity")
     plt.xticks([1, 2, 3, 4, 5])
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.45, linewidth=1.6)
-    plt.legend(fontsize=20, ncol=2)
+    plt.grid(True, alpha=0.45, linewidth=1.5)
+    plt.legend(fontsize=21, ncol=2)
     plt.tight_layout()
 
-    path = PLOT_DIR / "severity_vs_accuracy_all.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / "severity_vs_accuracy_all.png")
 
 
 def plot_severity_vs_accuracy_plots(mean_df):
     fig, axes = plt.subplots(
         nrows=2,
         ncols=3,
-        figsize=(30, 18),
+        figsize=(32, 18),
         sharex=True,
         sharey=True,
     )
@@ -264,26 +259,26 @@ def plot_severity_vs_accuracy_plots(mean_df):
                     subset["mean_accuracy"],
                     linestyle=style["linestyle"],
                     marker=style["marker"],
-                    linewidth=6,
-                    markersize=13,
+                    linewidth=5,
+                    markersize=12,
                     label=style["label"],
                 )
 
             ax.set_title(
                 column_titles[training_type],
-                fontsize=30,
+                fontsize=32,
                 fontweight="bold",
             )
 
             ax.set_xticks([1, 2, 3, 4, 5])
             ax.set_ylim(0.0, 1.0)
-            ax.grid(True, alpha=0.45, linewidth=1.6)
-            ax.tick_params(axis="both", labelsize=24)
+            ax.grid(True, alpha=0.45, linewidth=1.5)
+            ax.tick_params(axis="both", labelsize=26)
 
             if col == 0:
                 ax.set_ylabel(
                     row_titles[model],
-                    fontsize=32,
+                    fontsize=34,
                     fontweight="bold",
                 )
 
@@ -301,24 +296,23 @@ def plot_severity_vs_accuracy_plots(mean_df):
 
     fig.supxlabel(
         "Corruption Severity",
-        fontsize=34,
+        fontsize=36,
         fontweight="bold",
     )
 
     fig.supylabel(
         "Mean CIFAR-10-C Accuracy",
-        fontsize=34,
+        fontsize=36,
         fontweight="bold",
     )
 
     plt.tight_layout(rect=[0, 0, 1, 0.95])
 
-    path = PLOT_DIR / "severity_vs_accuracy_grid_large.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / "severity_vs_accuracy_grid_large.png")
 
 
 def plot_model_training_comparison(mean_df, model):
-    plt.figure(figsize=(22, 13))
+    plt.figure(figsize=(24, 14))
 
     for training_type in TRAINING_TYPES:
         for method in METHODS:
@@ -345,16 +339,15 @@ def plot_model_training_comparison(mean_df, model):
     plt.title(f"{model}: Standard vs AugMix across Severity")
     plt.xticks([1, 2, 3, 4, 5])
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.45, linewidth=1.6)
-    plt.legend(fontsize=20, ncol=2)
+    plt.grid(True, alpha=0.45, linewidth=1.5)
+    plt.legend(fontsize=21, ncol=2)
     plt.tight_layout()
 
-    path = PLOT_DIR / f"{model}_standard_vs_augmix.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / f"{model}_standard_vs_augmix.png")
 
 
 def plot_tent_gain(mean_df):
-    plt.figure(figsize=(22, 13))
+    plt.figure(figsize=(24, 14))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -396,16 +389,15 @@ def plot_tent_gain(mean_df):
     plt.ylabel("Accuracy Gain over Frozen")
     plt.title("TENT Gain over Frozen Baseline")
     plt.xticks([1, 2, 3, 4, 5])
-    plt.grid(True, alpha=0.45, linewidth=1.6)
-    plt.legend(fontsize=20, ncol=2)
+    plt.grid(True, alpha=0.45, linewidth=1.5)
+    plt.legend(fontsize=21, ncol=2)
     plt.tight_layout()
 
-    path = PLOT_DIR / "tent_gain_over_frozen_all.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / "tent_gain_over_frozen_all.png")
 
 
 def plot_continual_trajectory(corr_df, severity):
-    plt.figure(figsize=(28, 14))
+    plt.figure(figsize=(30, 15))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -433,21 +425,22 @@ def plot_continual_trajectory(corr_df, severity):
     plt.xlabel("Corruption Order")
     plt.ylabel("Accuracy")
     plt.title(f"Continual TENT Trajectory at Severity {severity}")
+
     plt.xticks(
         range(len(CORRUPTIONS)),
         CORRUPTIONS,
         rotation=45,
         ha="right",
-        fontsize=22,
+        fontsize=28,
     )
-    plt.yticks(fontsize=22)
+    plt.yticks(fontsize=28)
+
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.45, linewidth=1.6)
-    plt.legend(fontsize=20, ncol=2)
+    plt.grid(True, alpha=0.45, linewidth=1.5)
+    plt.legend(fontsize=23, ncol=2)
     plt.tight_layout()
 
-    path = PLOT_DIR / f"continual_trajectory_severity_{severity}.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / f"continual_trajectory_severity_{severity}.png")
 
 
 def plot_heatmap(corr_df, model, training_type, severity):
@@ -476,29 +469,29 @@ def plot_heatmap(corr_df, model, training_type, severity):
         columns=["Frozen", "Episodic TENT", "Continual TENT"],
     )
 
-    plt.figure(figsize=(14, 18))
+    plt.figure(figsize=(16, 20))
     plt.imshow(heatmap_df.values, aspect="auto", vmin=0.0, vmax=1.0)
 
     cbar = plt.colorbar(label="Accuracy")
-    cbar.ax.tick_params(labelsize=22)
+    cbar.ax.tick_params(labelsize=26)
 
     plt.xticks(
         range(len(heatmap_df.columns)),
         heatmap_df.columns,
         rotation=25,
         ha="right",
-        fontsize=24,
+        fontsize=28,
     )
 
     plt.yticks(
         range(len(CORRUPTIONS)),
         CORRUPTIONS,
-        fontsize=22,
+        fontsize=26,
     )
 
     plt.title(
         f"{model} | {training_type} | Severity {severity}",
-        fontsize=30,
+        fontsize=34,
         fontweight="bold",
     )
 
@@ -513,14 +506,13 @@ def plot_heatmap(corr_df, model, training_type, severity):
                     f"{value:.2f}",
                     ha="center",
                     va="center",
-                    fontsize=20,
+                    fontsize=23,
                     fontweight="bold",
                 )
 
     plt.tight_layout()
 
-    path = PLOT_DIR / f"{model}_{training_type}_heatmap_severity_{severity}.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / f"{model}_{training_type}_heatmap_severity_{severity}.png")
 
 
 def plot_entropy_vs_accuracy(corr_df):
@@ -529,7 +521,7 @@ def plot_entropy_vs_accuracy(corr_df):
         & corr_df["entropy"].notna()
     ]
 
-    plt.figure(figsize=(20, 13))
+    plt.figure(figsize=(24, 15))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -544,7 +536,7 @@ def plot_entropy_vs_accuracy(corr_df):
             plt.scatter(
                 model_subset["entropy"],
                 model_subset["accuracy"],
-                s=180,
+                s=220,
                 alpha=0.75,
                 label=f"{model} | {training_type}",
             )
@@ -553,12 +545,11 @@ def plot_entropy_vs_accuracy(corr_df):
     plt.ylabel("Accuracy")
     plt.title("Entropy vs Accuracy under TENT")
     plt.ylim(0.0, 1.0)
-    plt.grid(True, alpha=0.45, linewidth=1.6)
-    plt.legend(fontsize=20, ncol=2)
+    plt.grid(True, alpha=0.45, linewidth=1.5)
+    plt.legend(fontsize=24, ncol=2)
     plt.tight_layout()
 
-    path = PLOT_DIR / "entropy_vs_accuracy_all.png"
-    save_figure(path)
+    save_figure(PLOT_DIR / "entropy_vs_accuracy_all.png")
 
 
 def print_summary(mean_df):
