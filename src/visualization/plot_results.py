@@ -7,28 +7,68 @@ import pandas as pd
 
 
 # ============================================================
-# LARGE PAPER-READABLE GLOBAL PLOT STYLE
+# TWO-COLUMN PAPER-READABLE GLOBAL PLOT STYLE
 # ============================================================
-# If figures become too large, reduce SCALE to 0.85 or 0.75.
-SCALE = 1.0
+# Bu ayarlar özellikle figürler LaTeX/Word'de iki kolona veya
+# tam sayfa genişliğine sıkıştırıldığında okunabilir kalması için büyütüldü.
+#
+# Eğer figürler hâlâ küçük görünürse:
+#   SCALE = 1.15 yap
+#
+# Eğer figürler çok büyük görünürse:
+#   SCALE = 0.90 yap
+# ============================================================
+
+SCALE = 1.00
+
+FONT_BASE = int(54 * SCALE)
+FONT_TITLE = int(68 * SCALE)
+FONT_LABEL = int(62 * SCALE)
+FONT_TICK = int(48 * SCALE)
+FONT_LEGEND = int(44 * SCALE)
+FONT_SUPER = int(68 * SCALE)
+FONT_ANNOT = int(42 * SCALE)
+
+LINE_WIDTH = 9
+MARKER_SIZE = 22
+AXIS_WIDTH = 3.4
+GRID_WIDTH = 2.4
+TICK_WIDTH = 3.0
+TICK_SIZE = 12
 
 plt.rcParams.update({
-    "font.size": int(34 * SCALE),
-    "axes.titlesize": int(40 * SCALE),
-    "axes.labelsize": int(38 * SCALE),
-    "xtick.labelsize": int(30 * SCALE),
-    "ytick.labelsize": int(30 * SCALE),
-    "legend.fontsize": int(28 * SCALE),
-    "figure.titlesize": int(42 * SCALE),
-    "lines.linewidth": 7,
-    "lines.markersize": 16,
-    "axes.linewidth": 2.5,
-    "xtick.major.width": 2.2,
-    "ytick.major.width": 2.2,
-    "xtick.major.size": 9,
-    "ytick.major.size": 9,
+    "font.family": "DejaVu Sans",
+
+    "font.size": FONT_BASE,
+    "axes.titlesize": FONT_TITLE,
+    "axes.labelsize": FONT_LABEL,
+    "xtick.labelsize": FONT_TICK,
+    "ytick.labelsize": FONT_TICK,
+    "legend.fontsize": FONT_LEGEND,
+    "figure.titlesize": FONT_SUPER,
+
+    "axes.titleweight": "bold",
+    "axes.labelweight": "bold",
+
+    "lines.linewidth": LINE_WIDTH,
+    "lines.markersize": MARKER_SIZE,
+
+    "axes.linewidth": AXIS_WIDTH,
+    "xtick.major.width": TICK_WIDTH,
+    "ytick.major.width": TICK_WIDTH,
+    "xtick.major.size": TICK_SIZE,
+    "ytick.major.size": TICK_SIZE,
+
     "savefig.dpi": 600,
     "figure.dpi": 160,
+
+    # PDF çıktıda fontların düzgün gömülmesi için.
+    # Makaleye koyunca fontlar daha temiz kalır.
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+
+    # Eksi işaretinin bozulmasını engeller.
+    "axes.unicode_minus": False,
 })
 
 
@@ -80,7 +120,9 @@ RESULT_ROOT = Path("/content/drive/MyDrive/tta_project/results")
 FROZEN_DIR = RESULT_ROOT / "standard_frozen"
 TENT_DIR = RESULT_ROOT / "tent"
 CLEAN_DIR = RESULT_ROOT / "clean"
-PLOT_DIR = RESULT_ROOT / "plots_readable"
+
+# Eski klasörü ezmemek için yeni klasör.
+PLOT_DIR = RESULT_ROOT / "plots_two_column_readable"
 
 MODELS = ["cnn", "resnet18"]
 TRAINING_TYPES = ["standard", "augmix", "augmix_full"]
@@ -99,7 +141,9 @@ def load_json(path):
 def save_figure(path):
     """
     Saves each figure as both PNG and PDF.
-    PDF is better for papers because it stays sharp when enlarged.
+
+    PDF is recommended for papers because it stays sharp when enlarged
+    or compressed in two-column layouts.
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,12 +151,35 @@ def save_figure(path):
     png_path = path.with_suffix(".png")
     pdf_path = path.with_suffix(".pdf")
 
-    plt.savefig(png_path, dpi=600, bbox_inches="tight", pad_inches=0.18)
-    plt.savefig(pdf_path, bbox_inches="tight", pad_inches=0.18)
+    plt.savefig(
+        png_path,
+        dpi=600,
+        bbox_inches="tight",
+        pad_inches=0.28,
+        facecolor="white",
+    )
+    plt.savefig(
+        pdf_path,
+        bbox_inches="tight",
+        pad_inches=0.28,
+        facecolor="white",
+    )
     plt.close()
 
     print(f"Saved: {png_path}")
     print(f"Saved: {pdf_path}")
+
+
+def make_tick_labels_bold(ax):
+    for label in ax.get_xticklabels():
+        label.set_fontweight("bold")
+    for label in ax.get_yticklabels():
+        label.set_fontweight("bold")
+
+
+def thicken_spines(ax):
+    for spine in ax.spines.values():
+        spine.set_linewidth(AXIS_WIDTH)
 
 
 def format_accuracy_axis(ax, ymin=0, ymax=100):
@@ -121,12 +188,59 @@ def format_accuracy_axis(ax, ymin=0, ymax=100):
     """
     ax.set_ylim(ymin, ymax)
     ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.grid(True, alpha=0.45, linewidth=2.0)
-    ax.tick_params(axis="both", labelsize=int(30 * SCALE))
+    ax.grid(True, alpha=0.45, linewidth=GRID_WIDTH)
+    ax.tick_params(
+        axis="both",
+        labelsize=FONT_TICK,
+        width=TICK_WIDTH,
+        length=TICK_SIZE,
+    )
+    make_tick_labels_bold(ax)
+    thicken_spines(ax)
+
+
+def format_general_axis(ax):
+    ax.grid(True, alpha=0.45, linewidth=GRID_WIDTH)
+    ax.tick_params(
+        axis="both",
+        labelsize=FONT_TICK,
+        width=TICK_WIDTH,
+        length=TICK_SIZE,
+    )
+    make_tick_labels_bold(ax)
+    thicken_spines(ax)
 
 
 def accuracy_to_percent(series):
     return series * 100.0
+
+
+def add_big_legend_below(fig, ax, ncol=2, y=-0.02):
+    """
+    Puts legend below the figure so that the plot area remains readable.
+    Especially useful when the final figure is squeezed into two columns.
+    """
+    handles, labels = ax.get_legend_handles_labels()
+
+    if len(handles) == 0:
+        return
+
+    legend = fig.legend(
+        handles,
+        labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, y),
+        ncol=ncol,
+        frameon=True,
+        fontsize=FONT_LEGEND,
+        handlelength=2.8,
+        columnspacing=1.2,
+        handletextpad=0.6,
+        borderpad=0.7,
+    )
+
+    legend.get_frame().set_linewidth(2.5)
+    legend.get_frame().set_alpha(0.95)
 
 
 def find_result_file(model, training_type, severity, method):
@@ -250,7 +364,7 @@ def collect_corruption_results():
 # ============================================================
 
 def plot_severity_vs_accuracy(mean_df):
-    plt.figure(figsize=(34, 20))
+    fig, ax = plt.subplots(figsize=(40, 24))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -270,26 +384,31 @@ def plot_severity_vs_accuracy(mean_df):
                     f"{METHOD_NAMES[method]}"
                 )
 
-                plt.plot(
+                ax.plot(
                     subset["severity"],
                     accuracy_to_percent(subset["mean_accuracy"]),
                     marker="o",
-                    linewidth=7,
-                    markersize=16,
+                    linewidth=LINE_WIDTH,
+                    markersize=MARKER_SIZE,
                     label=label,
                 )
 
-    ax = plt.gca()
     format_accuracy_axis(ax)
 
-    plt.xlabel("Corruption Severity", fontweight="bold")
-    plt.ylabel("Mean Corruption Accuracy (%)", fontweight="bold")
-    plt.title("Mean Accuracy across Corruption Severity", fontweight="bold")
-    plt.xticks([1, 2, 3, 4, 5])
-    plt.legend(fontsize=int(24 * SCALE), ncol=2, frameon=True)
-    plt.tight_layout()
+    ax.set_xlabel("Corruption Severity", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Mean Corruption Accuracy (%)", fontweight="bold", labelpad=20)
+    ax.set_title(
+        "Mean Accuracy across Corruption Severity",
+        fontweight="bold",
+        pad=28,
+    )
+    ax.set_xticks([1, 2, 3, 4, 5])
 
-    save_figure(PLOT_DIR / "severity_vs_accuracy_all_large")
+    add_big_legend_below(fig, ax, ncol=3, y=-0.08)
+
+    fig.tight_layout(rect=[0, 0.15, 1, 1])
+
+    save_figure(PLOT_DIR / "severity_vs_accuracy_all_two_column")
 
 
 # ============================================================
@@ -300,7 +419,7 @@ def plot_severity_vs_accuracy_grid(mean_df):
     fig, axes = plt.subplots(
         nrows=2,
         ncols=3,
-        figsize=(42, 24),
+        figsize=(46, 28),
         sharex=True,
         sharey=True,
     )
@@ -344,16 +463,16 @@ def plot_severity_vs_accuracy_grid(mean_df):
                     accuracy_to_percent(subset["mean_accuracy"]),
                     linestyle=style["linestyle"],
                     marker=style["marker"],
-                    linewidth=7,
-                    markersize=16,
+                    linewidth=LINE_WIDTH,
+                    markersize=MARKER_SIZE,
                     label=style["label"],
                 )
 
             ax.set_title(
                 TRAINING_NAMES[training_type],
-                fontsize=int(38 * SCALE),
+                fontsize=FONT_TITLE,
                 fontweight="bold",
-                pad=18,
+                pad=22,
             )
 
             ax.set_xticks([1, 2, 3, 4, 5])
@@ -362,39 +481,45 @@ def plot_severity_vs_accuracy_grid(mean_df):
             if col == 0:
                 ax.set_ylabel(
                     f"{MODEL_NAMES[model]}\nAccuracy (%)",
-                    fontsize=int(38 * SCALE),
+                    fontsize=FONT_LABEL,
                     fontweight="bold",
+                    labelpad=22,
                 )
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
 
-    fig.legend(
+    legend = fig.legend(
         handles,
         labels,
         loc="upper center",
         ncol=3,
         frameon=True,
-        fontsize=int(32 * SCALE),
+        fontsize=FONT_LEGEND,
         bbox_to_anchor=(0.5, 1.03),
+        handlelength=3.0,
+        columnspacing=1.4,
+        handletextpad=0.7,
+        borderpad=0.7,
     )
+    legend.get_frame().set_linewidth(2.5)
 
     fig.supxlabel(
         "Corruption Severity",
-        fontsize=int(42 * SCALE),
+        fontsize=FONT_SUPER,
         fontweight="bold",
-        y=0.02,
+        y=0.035,
     )
 
     fig.supylabel(
         "Mean CIFAR-10-C Accuracy (%)",
-        fontsize=int(42 * SCALE),
+        fontsize=FONT_SUPER,
         fontweight="bold",
-        x=0.01,
+        x=0.005,
     )
 
-    plt.tight_layout(rect=[0.03, 0.05, 1, 0.94])
+    fig.tight_layout(rect=[0.045, 0.075, 1, 0.92])
 
-    save_figure(PLOT_DIR / "severity_vs_accuracy_grid_large")
+    save_figure(PLOT_DIR / "severity_vs_accuracy_grid_two_column")
 
 
 # ============================================================
@@ -402,7 +527,7 @@ def plot_severity_vs_accuracy_grid(mean_df):
 # ============================================================
 
 def plot_model_training_comparison(mean_df, model):
-    plt.figure(figsize=(34, 20))
+    fig, ax = plt.subplots(figsize=(38, 24))
 
     for training_type in TRAINING_TYPES:
         for method in METHODS:
@@ -417,29 +542,31 @@ def plot_model_training_comparison(mean_df, model):
 
             label = f"{TRAINING_NAMES[training_type]} | {METHOD_NAMES[method]}"
 
-            plt.plot(
+            ax.plot(
                 subset["severity"],
                 accuracy_to_percent(subset["mean_accuracy"]),
                 marker="o",
-                linewidth=7,
-                markersize=16,
+                linewidth=LINE_WIDTH,
+                markersize=MARKER_SIZE,
                 label=label,
             )
 
-    ax = plt.gca()
     format_accuracy_axis(ax)
 
-    plt.xlabel("Corruption Severity", fontweight="bold")
-    plt.ylabel("Mean Corruption Accuracy (%)", fontweight="bold")
-    plt.title(
+    ax.set_xlabel("Corruption Severity", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Mean Corruption Accuracy (%)", fontweight="bold", labelpad=20)
+    ax.set_title(
         f"{MODEL_NAMES[model]}: Training Strategy Comparison",
         fontweight="bold",
+        pad=28,
     )
-    plt.xticks([1, 2, 3, 4, 5])
-    plt.legend(fontsize=int(24 * SCALE), ncol=2, frameon=True)
-    plt.tight_layout()
+    ax.set_xticks([1, 2, 3, 4, 5])
 
-    save_figure(PLOT_DIR / f"{model}_standard_vs_augmix_large")
+    add_big_legend_below(fig, ax, ncol=3, y=-0.055)
+
+    fig.tight_layout(rect=[0, 0.13, 1, 1])
+
+    save_figure(PLOT_DIR / f"{model}_standard_vs_augmix_two_column")
 
 
 # ============================================================
@@ -447,7 +574,7 @@ def plot_model_training_comparison(mean_df, model):
 # ============================================================
 
 def plot_tent_gain(mean_df):
-    plt.figure(figsize=(34, 20))
+    fig, ax = plt.subplots(figsize=(40, 24))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -483,26 +610,33 @@ def plot_tent_gain(mean_df):
                     f"{METHOD_NAMES[method]}"
                 )
 
-                plt.plot(
+                ax.plot(
                     merged["severity"],
                     merged["gain"],
                     marker="o",
-                    linewidth=7,
-                    markersize=16,
+                    linewidth=LINE_WIDTH,
+                    markersize=MARKER_SIZE,
                     label=label,
                 )
 
-    plt.axhline(0.0, linestyle="--", linewidth=5)
+    ax.axhline(0.0, linestyle="--", linewidth=6)
 
-    plt.xlabel("Corruption Severity", fontweight="bold")
-    plt.ylabel("Accuracy Gain over Frozen (percentage points)", fontweight="bold")
-    plt.title("TENT Gain over Frozen Baseline", fontweight="bold")
-    plt.xticks([1, 2, 3, 4, 5])
-    plt.grid(True, alpha=0.45, linewidth=2.0)
-    plt.legend(fontsize=int(24 * SCALE), ncol=2, frameon=True)
-    plt.tight_layout()
+    ax.set_xlabel("Corruption Severity", fontweight="bold", labelpad=20)
+    ax.set_ylabel(
+        "Accuracy Gain over Frozen (percentage points)",
+        fontweight="bold",
+        labelpad=20,
+    )
+    ax.set_title("TENT Gain over Frozen Baseline", fontweight="bold", pad=28)
+    ax.set_xticks([1, 2, 3, 4, 5])
 
-    save_figure(PLOT_DIR / "tent_gain_over_frozen_all_large")
+    format_general_axis(ax)
+
+    add_big_legend_below(fig, ax, ncol=3, y=-0.07)
+
+    fig.tight_layout(rect=[0, 0.15, 1, 1])
+
+    save_figure(PLOT_DIR / "tent_gain_over_frozen_all_two_column")
 
 
 # ============================================================
@@ -510,7 +644,7 @@ def plot_tent_gain(mean_df):
 # ============================================================
 
 def plot_continual_trajectory(corr_df, severity):
-    plt.figure(figsize=(42, 22))
+    fig, ax = plt.subplots(figsize=(46, 26))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -524,49 +658,62 @@ def plot_continual_trajectory(corr_df, severity):
             if len(subset) == 0:
                 continue
 
-            subset = subset.set_index("corruption").loc[CORRUPTIONS].reset_index()
+            # reindex kullanımı .loc[CORRUPTIONS] gibi eksik corruption varsa
+            # hata vermesini engeller.
+            subset = (
+                subset
+                .set_index("corruption")
+                .reindex(CORRUPTIONS)
+                .reset_index()
+            )
+
+            subset = subset.dropna(subset=["accuracy"])
+
+            if len(subset) == 0:
+                continue
 
             label = f"{MODEL_NAMES[model]} | {TRAINING_NAMES[training_type]}"
 
-            plt.plot(
-                range(len(CORRUPTIONS)),
+            x_positions = [
+                CORRUPTIONS.index(corruption)
+                for corruption in subset["corruption"]
+            ]
+
+            ax.plot(
+                x_positions,
                 accuracy_to_percent(subset["accuracy"]),
                 marker="o",
-                linewidth=8,
-                markersize=18,
+                linewidth=LINE_WIDTH,
+                markersize=MARKER_SIZE,
                 label=label,
             )
 
-    ax = plt.gca()
     format_accuracy_axis(ax)
 
-    plt.xlabel("Corruption Order", fontweight="bold")
-    plt.ylabel("Accuracy (%)", fontweight="bold")
-    plt.title(
+    ax.set_xlabel("Corruption Order", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Accuracy (%)", fontweight="bold", labelpad=20)
+    ax.set_title(
         f"Continual TENT Trajectory at Severity {severity}",
         fontweight="bold",
+        pad=28,
     )
 
     short_labels = [SHORT_CORRUPTION_NAMES[c] for c in CORRUPTIONS]
 
-    plt.xticks(
-        range(len(CORRUPTIONS)),
+    ax.set_xticks(range(len(CORRUPTIONS)))
+    ax.set_xticklabels(
         short_labels,
-        rotation=35,
+        rotation=42,
         ha="right",
-        fontsize=int(30 * SCALE),
+        fontsize=FONT_TICK,
+        fontweight="bold",
     )
 
-    plt.legend(
-        fontsize=int(28 * SCALE),
-        ncol=2,
-        frameon=True,
-        loc="best",
-    )
+    add_big_legend_below(fig, ax, ncol=2, y=-0.055)
 
-    plt.tight_layout()
+    fig.tight_layout(rect=[0, 0.13, 1, 1])
 
-    save_figure(PLOT_DIR / f"continual_trajectory_severity_{severity}_large")
+    save_figure(PLOT_DIR / f"continual_trajectory_severity_{severity}_two_column")
 
 
 # ============================================================
@@ -599,32 +746,52 @@ def plot_heatmap(corr_df, model, training_type, severity):
         columns=["Frozen", "Episodic TENT", "Continual TENT"],
     )
 
-    plt.figure(figsize=(22, 26))
-    plt.imshow(heatmap_df.values, aspect="auto", vmin=0.0, vmax=100.0)
+    fig, ax = plt.subplots(figsize=(24, 30))
 
-    cbar = plt.colorbar(label="Accuracy (%)")
-    cbar.ax.tick_params(labelsize=int(30 * SCALE))
-    cbar.set_label("Accuracy (%)", fontsize=int(34 * SCALE), fontweight="bold")
+    image = ax.imshow(
+        heatmap_df.values,
+        aspect="auto",
+        vmin=0.0,
+        vmax=100.0,
+    )
 
-    plt.xticks(
-        range(len(heatmap_df.columns)),
+    cbar = fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+    cbar.ax.tick_params(
+        labelsize=FONT_TICK,
+        width=TICK_WIDTH,
+        length=TICK_SIZE,
+    )
+    cbar.set_label(
+        "Accuracy (%)",
+        fontsize=FONT_LABEL,
+        fontweight="bold",
+        labelpad=18,
+    )
+
+    for tick_label in cbar.ax.get_yticklabels():
+        tick_label.set_fontweight("bold")
+
+    ax.set_xticks(range(len(heatmap_df.columns)))
+    ax.set_xticklabels(
         heatmap_df.columns,
         rotation=25,
         ha="right",
-        fontsize=int(32 * SCALE),
-    )
-
-    plt.yticks(
-        range(len(heatmap_df.index)),
-        heatmap_df.index,
-        fontsize=int(30 * SCALE),
-    )
-
-    plt.title(
-        f"{MODEL_NAMES[model]} | {TRAINING_NAMES[training_type]} | Severity {severity}",
-        fontsize=int(38 * SCALE),
+        fontsize=FONT_TICK,
         fontweight="bold",
-        pad=20,
+    )
+
+    ax.set_yticks(range(len(heatmap_df.index)))
+    ax.set_yticklabels(
+        heatmap_df.index,
+        fontsize=FONT_TICK,
+        fontweight="bold",
+    )
+
+    ax.set_title(
+        f"{MODEL_NAMES[model]} | {TRAINING_NAMES[training_type]} | Severity {severity}",
+        fontsize=FONT_TITLE,
+        fontweight="bold",
+        pad=28,
     )
 
     for i in range(len(heatmap_df.index)):
@@ -632,20 +799,27 @@ def plot_heatmap(corr_df, model, training_type, severity):
             value = heatmap_df.iloc[i, j]
 
             if pd.notna(value):
-                plt.text(
+                ax.text(
                     j,
                     i,
                     f"{value:.1f}",
                     ha="center",
                     va="center",
-                    fontsize=int(27 * SCALE),
+                    fontsize=FONT_ANNOT,
                     fontweight="bold",
                 )
 
-    plt.tight_layout()
+    ax.tick_params(
+        axis="both",
+        width=TICK_WIDTH,
+        length=TICK_SIZE,
+    )
+    thicken_spines(ax)
+
+    fig.tight_layout()
 
     save_figure(
-        PLOT_DIR / f"{model}_{training_type}_heatmap_severity_{severity}_large"
+        PLOT_DIR / f"{model}_{training_type}_heatmap_severity_{severity}_two_column"
     )
 
 
@@ -659,7 +833,7 @@ def plot_entropy_vs_accuracy(corr_df):
         & corr_df["entropy"].notna()
     ]
 
-    plt.figure(figsize=(34, 22))
+    fig, ax = plt.subplots(figsize=(38, 26))
 
     for model in MODELS:
         for training_type in TRAINING_TYPES:
@@ -673,36 +847,30 @@ def plot_entropy_vs_accuracy(corr_df):
 
             label = f"{MODEL_NAMES[model]} | {TRAINING_NAMES[training_type]}"
 
-            plt.scatter(
+            ax.scatter(
                 model_subset["entropy"],
                 accuracy_to_percent(model_subset["accuracy"]),
-                s=360,
+                s=520,
                 alpha=0.72,
                 label=label,
                 edgecolors="black",
-                linewidths=1.2,
+                linewidths=2.2,
             )
 
-    ax = plt.gca()
     ax.set_ylim(0, 100)
     ax.set_yticks([0, 20, 40, 60, 80, 100])
-    ax.grid(True, alpha=0.45, linewidth=2.0)
-    ax.tick_params(axis="both", labelsize=int(30 * SCALE))
 
-    plt.xlabel("Prediction Entropy", fontweight="bold")
-    plt.ylabel("Accuracy (%)", fontweight="bold")
-    plt.title("Entropy vs Accuracy under TENT", fontweight="bold")
+    ax.set_xlabel("Prediction Entropy", fontweight="bold", labelpad=20)
+    ax.set_ylabel("Accuracy (%)", fontweight="bold", labelpad=20)
+    ax.set_title("Entropy vs Accuracy under TENT", fontweight="bold", pad=28)
 
-    plt.legend(
-        fontsize=int(27 * SCALE),
-        ncol=2,
-        frameon=True,
-        loc="best",
-    )
+    format_general_axis(ax)
 
-    plt.tight_layout()
+    add_big_legend_below(fig, ax, ncol=2, y=-0.055)
 
-    save_figure(PLOT_DIR / "entropy_vs_accuracy_all_large")
+    fig.tight_layout(rect=[0, 0.13, 1, 1])
+
+    save_figure(PLOT_DIR / "entropy_vs_accuracy_all_two_column")
 
 
 # ============================================================
